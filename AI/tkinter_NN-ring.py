@@ -8,20 +8,27 @@ user = getpass.getuser()
 
 
 import numpy as np
+# 加工時間を計算するAIを呼び出す
 with open(f"/Users/{user}/Desktop/rotaryNN.pickle", mode="rb") as f1:
         model1 = pickle.load(f1)
-    
+
+# 入力データの正規化をするモデルを呼び出す
 with open(f"/Users/{user}/Desktop/rotaryScaler.pickle", mode="rb") as f2:
     model2 = pickle.load(f2)
-# /Users/yamamurokazuyuki/Desktop/rotaryScaler.pickle
-# /Users/yamamurokazuyuki/Desktop/rotaryNN.pickle
+
 def on_register():
     # 各エントリーフィールドから値を取得
+    # 回転数を取得
     kaitennsuu = entry_kaitennsuu.get()
+    # 素材の外径を取得
     sozaigaikei = entry_sozaigaikei.get()
+    # 素材の内径を取得
     sozainaikei = entry_sozainaikei.get()
+    # 元の素材の厚みを取得
     motosozai = entry_motosozai.get()
+    # 加工後の素材の厚みを取得
     kakougosozai = entry_kakougosozai.get()
+    # 切込量を取得
     kirikomi = entry_kirikomi.get()
     
     
@@ -29,6 +36,8 @@ def on_register():
     if not (kaitennsuu and sozaigaikei and sozainaikei and motosozai and kakougosozai and kirikomi):
         messagebox.showwarning("警告", "すべてのフィールドを入力してください。")
         return
+    
+    # 浮動小数展点に変換できる入力かを調べる関数
     def is_num(t: str) -> bool:
         try:
             float(t)
@@ -36,6 +45,7 @@ def on_register():
         except ValueError:
             return False
     
+    # バリデーションを行う
     if  not is_num (kaitennsuu) :
         messagebox.showwarning("警告", "回転数を数字で入力してください。")
         return
@@ -55,6 +65,7 @@ def on_register():
         messagebox.showwarning("警告", "切込量を数字で入力してください。")
         return
     
+    # 浮動小数点に変換する
     kaitennsuu = float(kaitennsuu)
     sozaigaikei = float(sozaigaikei)
     sozainaikei = float(sozainaikei)
@@ -62,6 +73,7 @@ def on_register():
     kakougosozai = float(kakougosozai)
     kirikomi = float(kirikomi)
     
+    # 変換後のバリデーションを行う
     if  kaitennsuu > 130 :
         messagebox.showwarning("警告", "テーブル回転数は130以下にしてください")
         return
@@ -71,40 +83,33 @@ def on_register():
     
     
     
-    # 回転数
-    kaitennsuu
-    # 素材の大きさ
-    sozaigaikei
+    
+    # 外径の大きさを少し大きめに見積もる
     sozaigaikei += 20
     createXgaikei = np.array([[kaitennsuu, sozaigaikei]])
-    #素材の反復径
+    #内径の大きさを少し小さめに見積もる
     sozainaikei -= 50
+    # 入力データをNampy array型に変換する
     createXnaikei = np.array([[kaitennsuu, sozainaikei]])
     
     
     
-    # 元
-    motosozai
-    # 狙い
-    kakougosozai
-    # 切込
-    kirikomi
-    # 加工量
+    # 加工量を計算する
     kakouryou = motosozai - kakougosozai
     kakouryou = round(kakouryou, 3)
-    # 切込回数
+    # 切込回数を計算する
     kirikomikaisuu = kakouryou / kirikomi
-
     kirikomikaisuu = round(kirikomikaisuu, 0)
     if kirikomikaisuu % 2 == 0:
          None
     else:
          kirikomikaisuu += 1
-    kirikomikaisuu
     
+    # 入力データの正規化を内径と外径で行う
     createXgaikeis = model2.transform(createXgaikei)
     createXnaikeis = model2.transform(createXnaikei)
     
+    # 入力データから時間を算出
     y_predcreateXgaikeis = model1.predict(createXgaikeis)
     y_predcreateXgaikeis = y_predcreateXgaikeis.tolist()
     CXgaikeis = y_predcreateXgaikeis[0]
@@ -116,10 +121,9 @@ def on_register():
     C = CXgaikeis - CXnaikeis
     
     
-    
+    # 結果をデバッグ
     print(f'テーブル変速{kaitennsuu}回転ワークの外径{sozaigaikei - 20}mmワークの内径{sozainaikei + 50}の時の砥石横軸移動時間は{C}秒です')
     print(f'加工にかかってしまう時間は{round((kirikomikaisuu * C) / 60, 1)}分')
-    
     onetoisi = f"{C}秒"
     alltoisi = f"加工時間は{round((kirikomikaisuu * C) / 60, 1)}分"
     
@@ -130,11 +134,11 @@ def on_register():
     
     # テキストエリアに入力情報を表示
     info = f"""
-加工量:{kakouryou}mm
-必要砥石移動回数: {kirikomikaisuu}回
-砥石横断時間（１回分):{onetoisi}
-<<<{alltoisi}>>>
- """
+    加工量:{kakouryou}mm
+    必要砥石移動回数: {kirikomikaisuu}回
+    砥石横断時間（１回分):{onetoisi}
+    <<<{alltoisi}>>>
+        """
 
     
 
